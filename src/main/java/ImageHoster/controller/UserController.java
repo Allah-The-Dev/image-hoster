@@ -46,8 +46,15 @@ public class UserController {
     @RequestMapping(value = "users/registration", method = RequestMethod.POST)
     public String registerUser(User user, Model model) {
 
+        if(passwordAndConfirmPasswordDoNotMatch(user)){
+            model.addAttribute("User", user);
+            model.addAttribute("passwordMismatchError", true);
+            return "users/registration";
+        }
+
         Pattern p = Pattern.compile(PASSWORD_PATTERN);
         Matcher m = p.matcher(user.getPassword());
+
         if(m.matches()){
             userService.registerUser(user);
             return "redirect:/users/login";
@@ -58,7 +65,7 @@ public class UserController {
         }
     }
 
-    //This controller method is called when the request pattern is of type 'users/login'
+	//This controller method is called when the request pattern is of type 'users/login'
     @RequestMapping("users/login")
     public String login() {
         return "users/login";
@@ -92,4 +99,8 @@ public class UserController {
         model.addAttribute("images", images);
         return "index";
     }
+
+    private boolean passwordAndConfirmPasswordDoNotMatch(User user) {
+		return !user.getPassword().equals(user.getConfirmPassword());
+	}
 }

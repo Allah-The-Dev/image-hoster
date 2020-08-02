@@ -25,6 +25,9 @@ public class User {
     @Column(name = "password")
     private String password;
 
+    @Transient
+    private String confirmPassword;
+
     //The 'users' table is mapped to 'user_profile' table with One:One mapping
     //cascade = CascadeType.ALL specifies that if a record in 'user_profile' table is deleted or updated, then all the records in 'users' table associated to that particular record in 'user_profile' table will be deleted or updated  first and then the record in the 'user_profile' table will be deleted or updated
     //FetchType is EAGER
@@ -90,6 +93,14 @@ public class User {
 
 	public void setComments(List<Comment> comments) {
 		this.comments = comments;
+	}
+
+	public String getConfirmPassword() {
+		return confirmPassword;
+	}
+
+	public void setConfirmPassword(String confirmPassword) {
+		this.confirmPassword = confirmPassword;
 	}
 }
 
