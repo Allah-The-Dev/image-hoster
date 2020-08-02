@@ -53,8 +53,9 @@ public class ImageRepository {
     public Image getImageByTitle(String title) {
         EntityManager em = emf.createEntityManager();
         try {
-            TypedQuery<Image> typedQuery = em.createQuery("SELECT i from Image i where i.title =:title", Image.class).setParameter("title", title);
-            return typedQuery.getSingleResult();
+            String queryToGetLatestImage = "SELECT i from Image i where i.title =:title order by date desc";
+            TypedQuery<Image> typedQuery = em.createQuery(queryToGetLatestImage, Image.class).setParameter("title", title);
+            return typedQuery.getResultList().get(0);
         } catch (NoResultException nre) {
             return null;
         }
