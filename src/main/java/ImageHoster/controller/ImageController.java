@@ -8,6 +8,7 @@ import ImageHoster.service.TagService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,6 +21,11 @@ import java.util.*;
 
 @Controller
 public class ImageController {
+
+    private static String EDIT_ERROR = "Only the owner of the image can edit the image";
+    private static String DELETE_ERROR = "Only the owner of the image can delete the image";
+    private static String EDIT = "edit";
+    private static String DELETE = "delete";
 
     @Autowired
     private ImageService imageService;
@@ -46,10 +52,17 @@ public class ImageController {
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
     @RequestMapping("/images/{title}")
-    public String showImage(@PathVariable("title") String title, Model model) {
+    public String showImage(@PathVariable("title") String title, @RequestParam(required = false) String errorType, Model model) {
         Image image = imageService.getImageByTitle(title);
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
+        if(StringUtils.hasText(errorType)){
+            if(EDIT.equalsIgnoreCase(errorType)){
+                model.addAttribute("editError", EDIT_ERROR);
+            }else if(DELETE.equalsIgnoreCase(errorType)){
+                model.addAttribute("deleteError", DELETE_ERROR);
+            }
+        }
         return "images/image";
     }
 
@@ -92,12 +105,22 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(
+        @RequestParam("imageId") Integer imageId, 
+        Model model,
+        HttpSession session
+    ){
+        
         Image image = imageService.getImage(imageId);
 
         String tags = convertTagsToString(image.getTags());
         model.addAttribute("image", image);
         model.addAttribute("tags", tags);
+
+        if(loggedInUserIsNotImageOwner(session, image)){
+            return "redirect:/images/" + image.getTitle() + "?errorType=edit";
+        }
+
         return "images/edit";
     }
 
@@ -135,12 +158,15 @@ public class ImageController {
         return "redirect:/images/" + updatedImage.getTitle();
     }
 
-
-    //This controller method is called when the request pattern is of type 'deleteImage' and also the incoming request is of DELETE type
+	//This controller method is called when the request pattern is of type 'deleteImage' and also the incoming request is of DELETE type
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId, HttpSession session) {
+        Image image = imageService.getImage(imageId);
+        if(loggedInUserIsNotImageOwner(session, image)){
+            return "redirect:/images/" + image.getTitle() + "?errorType=delete";
+        }
         imageService.deleteImage(imageId);
         return "redirect:/images";
     }
@@ -187,4 +213,9 @@ public class ImageController {
 
         return tagString.toString();
     }
+
+    private boolean loggedInUserIsNotImageOwner(HttpSession session, Image image) {
+        User user = (User) session.getAttribute("loggeduser");
+		return !user.getUsername().equals(image.getUser().getUsername());
+	}
 }
